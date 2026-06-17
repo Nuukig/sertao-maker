@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Publicar Projeto · Sertão Maker</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <style>
+    body { background: var(--fundo); display: block; }
+    .page-form { max-width: 700px; margin: 40px auto; padding: 0 24px 60px; }
+    .page-form h1 { font-size: 24px; font-weight: 700; color: var(--verde-escuro); margin-bottom: 4px; }
+    .page-form .sub { font-size: 14px; color: #777; margin-bottom: 32px; }
+    .form-card { background: white; border-radius: var(--radius-lg); box-shadow: 0 2px 16px rgba(0,0,0,0.07); padding: 32px; }
+    .upload-area { border: 2px dashed #ddd; border-radius: var(--radius); padding: 32px; text-align: center; cursor: pointer; transition: border-color 0.2s; background: #fafafa; }
+    .upload-area:hover, .upload-area.drag { border-color: var(--verde); background: #f0faf0; }
+    .upload-area .icon { font-size: 36px; margin-bottom: 8px; }
+    .upload-area p { font-size: 14px; color: #666; }
+    .upload-area span { font-size: 12px; color: #999; }
+    .upload-area input { display: none; }
+    .preview-img { width: 100%; max-height: 240px; object-fit: cover; border-radius: var(--radius); margin-top: 12px; display: none; }
+    .arquivo-nome { font-size: 13px; color: var(--verde-escuro); font-weight: 600; margin-top: 10px; display: none; }
+    .progress-bar { height: 6px; background: #eee; border-radius: 3px; margin-top: 16px; display: none; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--verde); border-radius: 3px; width: 0%; transition: width 0.3s; }
+    .form-section { margin-bottom: 24px; }
+    .form-section h3 { font-size: 15px; font-weight: 600; color: var(--verde-escuro); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1.5px solid #f0f0f0; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/projects.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="inner">
+      <img src="assets/logo.jpg" alt="Sertão Maker" class="logo">
+      <nav>
+        <a href="index.html">Projetos</a>
+        <a href="novo-projeto.html" class="active">Publicar Projeto</a>
+        <a href="meus-projetos.html">Meus Projetos</a>
+      </nav>
+      <div class="user-menu">
+        <div class="avatar" id="avatarLetra"></div>
+        <button class="btn btn-outline btn-sm" onclick="Auth.logout()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-form">
+    <h1>Publicar novo projeto</h1>
+    <p class="sub">Preencha as informações do seu projeto para compartilhá-lo com a comunidade Maker.</p>
+
+    <div class="form-card">
+
+      <div class="form-section">
+        <h3>📋 Informações do projeto</h3>
+
+        <div class="form-group">
+          <label>Título do projeto *</label>
+          <input type="text" id="titulo" placeholder="Ex: Suporte para celular impresso em 3D">
+        </div>
+
+        <div class="form-group">
+          <label>Descrição</label>
+          <textarea id="descricao" placeholder="Descreva o projeto, materiais usados, configurações..." rows="4" style="width:100%;padding:11px 14px;border:1.5px solid #ddd;border-radius:var(--radius);font-family:Inter,sans-serif;font-size:14px;resize:vertical;transition:border-color 0.2s" onfocus="this.style.borderColor='var(--verde)'" onblur="this.style.borderColor='#ddd'"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Categoria *</label>
+          <select id="categoria" style="width:100%;padding:11px 14px;border:1.5px solid #ddd;border-radius:var(--radius);font-family:Inter,sans-serif;font-size:14px">
+            <option value="">Selecione uma categoria</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>🖼️ Imagem do projeto</h3>
+        <div class="upload-area" id="uploadImgArea" onclick="document.getElementById('inputImagem').click()" ondragover="dragOver(event,'uploadImgArea')" ondrop="dropImagem(event)">
+          <input type="file" id="inputImagem" accept="image/*" onchange="previewImagem(this)">
+          <div class="icon">📷</div>
+          <p>Clique ou arraste uma foto do projeto</p>
+          <span>JPG, PNG, WEBP — máx. 10MB</span>
+        </div>
+        <img id="previewImg" class="preview-img">
+      </div>
+
+      <div class="form-section">
+        <h3>📁 Arquivo do projeto</h3>
+        <div class="upload-area" id="uploadArqArea" onclick="document.getElementById('inputArquivo').click()" ondragover="dragOver(event,'uploadArqArea')" ondrop="dropArquivo(event)">
+          <input type="file" id="inputArquivo" accept=".stl,.obj,.gcode,.svg,.dxf,.ai,.step,.iges,.f3d,.zip,.pdf" onchange="mostrarArquivo(this)">
+          <div class="icon">📦</div>
+          <p>Clique ou arraste o arquivo do projeto</p>
+          <span>STL, OBJ, GCODE, SVG, DXF, STEP, F3D, ZIP, PDF — máx. 100MB</span>
+        </div>
+        <div class="arquivo-nome" id="nomeArquivo"></div>
+        <div class="progress-bar" id="progressBar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <div class="auth-error" id="erroGeral"></div>
+
+      <button class="btn-auth" id="btnPublicar" onclick="publicarProjeto()">🚀 Publicar projeto</button>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let usuarioAtual = null;
+    let arquivoImagem = null;
+    let arquivoProjeto = null;
+
+    async function init() {
+      const user = await Auth.exigirLogin();
+      if (!user) return;
+      usuarioAtual = await Auth.getUsuarioAtual();
+      if (usuarioAtual) {
+        document.getElementById('avatarLetra').textContent = usuarioAtual.nome[0].toUpperCase();
+      }
+
+      await Drive.inicializar();
+
+      const sel = document.getElementById('categoria');
+      Projetos.categorias.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = `${c.icone} ${c.label}`;
+        sel.appendChild(opt);
+      });
+    }
+
+    function previewImagem(input) {
+      const file = input.files[0];
+      if (!file) return;
+      arquivoImagem = file;
+      const preview = document.getElementById('previewImg');
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'block';
+    }
+
+    function mostrarArquivo(input) {
+      const file = input.files[0];
+      if (!file) return;
+      arquivoProjeto = file;
+      const el = document.getElementById('nomeArquivo');
+      el.textContent = `✅ ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`;
+      el.style.display = 'block';
+    }
+
+    function dragOver(e, id) {
+      e.preventDefault();
+      document.getElementById(id).classList.add('drag');
+    }
+
+    function dropImagem(e) {
+      e.preventDefault();
+      document.getElementById('uploadImgArea').classList.remove('drag');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const input = document.getElementById('inputImagem');
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        previewImagem(input);
+      }
+    }
+
+    function dropArquivo(e) {
+      e.preventDefault();
+      document.getElementById('uploadArqArea').classList.remove('drag');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        const input = document.getElementById('inputArquivo');
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        mostrarArquivo(input);
+      }
+    }
+
+    function setProgress(pct) {
+      document.getElementById('progressBar').style.display = 'block';
+      document.getElementById('progressFill').style.width = pct + '%';
+    }
+
+    async function publicarProjeto() {
+      const titulo = document.getElementById('titulo').value.trim();
+      const descricao = document.getElementById('descricao').value.trim();
+      const categoria = document.getElementById('categoria').value;
+      const erroGeral = document.getElementById('erroGeral');
+      const btn = document.getElementById('btnPublicar');
+
+      if (!titulo || !categoria) {
+        erroGeral.textContent = 'Preencha o título e a categoria do projeto.';
+        erroGeral.classList.add('show');
+        return;
+      }
+
+      erroGeral.classList.remove('show');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading-spinner"></span>Publicando...';
+
+      try {
+        let imagem_drive_id = null;
+        let arquivo_drive_id = null;
+
+        if (arquivoImagem) {
+          btn.innerHTML = '<span class="loading-spinner"></span>Enviando imagem...';
+          setProgress(20);
+          const res = await Drive.fazerUploadImagem(arquivoImagem);
+          imagem_drive_id = res.id;
+          setProgress(50);
+        }
+
+        if (arquivoProjeto) {
+          btn.innerHTML = '<span class="loading-spinner"></span>Enviando arquivo...';
+          setProgress(70);
+          const res = await Drive.fazerUploadProjeto(arquivoProjeto);
+          arquivo_drive_id = res.id;
+          setProgress(90);
+        }
+
+        await Projetos.criar({
+          titulo,
+          descricao,
+          categoria,
+          usuario_id: usuarioAtual.id,
+          imagem_drive_id,
+          arquivo_drive_id
+        });
+
+        setProgress(100);
+        mostrarToast('Projeto publicado com sucesso!');
+        setTimeout(() => window.location.href = 'index.html', 1500);
+
+      } catch (err) {
+        erroGeral.textContent = 'Erro ao publicar: ' + (err.message || 'Tente novamente.');
+        erroGeral.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = '🚀 Publicar projeto';
+      }
+    }
+
+    function mostrarToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    init();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meus Projetos · Sertão Maker</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/projects.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="inner">
+      <img src="assets/logo.jpg" alt="Sertão Maker" class="logo">
+      <nav>
+        <a href="index.html">Projetos</a>
+        <a href="novo-projeto.html">Publicar Projeto</a>
+        <a href="meus-projetos.html" class="active">Meus Projetos</a>
+      </nav>
+      <div class="user-menu">
+        <div class="avatar" id="avatarLetra"></div>
+        <span id="nomeUsuario" style="font-size:14px;font-weight:500"></span>
+        <button class="btn btn-outline btn-sm" onclick="Auth.logout()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="container">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <h2 class="section-title">Meus projetos</h2>
+        <a href="novo-projeto.html" class="btn btn-primary">+ Novo projeto</a>
+      </div>
+      <p class="section-sub" id="subTitulo">Carregando...</p>
+
+      <div style="background:white;border-radius:var(--radius-lg);padding:20px;box-shadow:var(--sombra);margin-bottom:28px">
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div class="avatar" id="avatarGrande" style="width:52px;height:52px;font-size:20px"></div>
+          <div>
+            <div style="font-size:18px;font-weight:700" id="nomeCompleto"></div>
+            <div style="font-size:13px;color:#777" id="infoPerfil"></div>
+          </div>
+          <span class="badge" id="badgeTipo" style="margin-left:auto"></span>
+        </div>
+      </div>
+
+      <div id="loader" class="page-loader"><div class="spinner"></div></div>
+      <div class="grid-projetos" id="gridProjetos" style="display:none"></div>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="icon">📭</div>
+        <p>Você ainda não publicou nenhum projeto.</p>
+        <br>
+        <a href="novo-projeto.html" class="btn btn-primary">Publicar primeiro projeto</a>
+      </div>
+
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalConteudo"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <footer>
+    <span>Sertão Maker</span> — Laboratório de Fabricação Digital · Todos os direitos reservados
+  </footer>
+
+  <script>
+    let usuarioAtual = null;
+
+    async function init() {
+      const user = await Auth.exigirLogin();
+      if (!user) return;
+      usuarioAtual = await Auth.getUsuarioAtual();
+      if (usuarioAtual) {
+        document.getElementById('avatarLetra').textContent = usuarioAtual.nome[0].toUpperCase();
+        document.getElementById('avatarGrande').textContent = usuarioAtual.nome[0].toUpperCase();
+        document.getElementById('nomeUsuario').textContent = usuarioAtual.nome.split(' ')[0];
+        document.getElementById('nomeCompleto').textContent = usuarioAtual.nome;
+        document.getElementById('infoPerfil').textContent = `${usuarioAtual.matricula} · ${usuarioAtual.curso}`;
+        const badge = document.getElementById('badgeTipo');
+        badge.textContent = usuarioAtual.tipo;
+        badge.className = `badge badge-${usuarioAtual.tipo}`;
+      }
+      await carregarMeusProjetos();
+    }
+
+    async function carregarMeusProjetos() {
+      document.getElementById('loader').style.display = 'flex';
+      document.getElementById('gridProjetos').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'none';
+
+      const projetos = await Projetos.listar({ usuario_id: usuarioAtual.id });
+
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('subTitulo').textContent = `${projetos.length} projeto(s) publicado(s) por você`;
+
+      if (projetos.length === 0) {
+        document.getElementById('emptyState').style.display = 'block';
+        return;
+      }
+
+      const grid = document.getElementById('gridProjetos');
+      grid.innerHTML = projetos.map(p => Projetos.renderCard(p, usuarioAtual?.id)).join('');
+      grid.style.display = 'grid';
+    }
+
+    async function abrirProjeto(id) {
+      const overlay = document.getElementById('modalOverlay');
+      const modal = document.getElementById('modalConteudo');
+      modal.innerHTML = '<div style="padding:40px;text-align:center"><div class="spinner" style="margin:0 auto"></div></div>';
+      overlay.classList.add('show');
+      const projeto = await Projetos.buscarPorId(id);
+      modal.innerHTML = Projetos.renderModal(projeto);
+    }
+
+    function fecharModal() {
+      document.getElementById('modalOverlay').classList.remove('show');
+    }
+
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+      if (e.target === this) fecharModal();
+    });
+
+    async function confirmarDelecao(id, e) {
+      e.stopPropagation();
+      if (!confirm('Tem certeza que deseja excluir este projeto?')) return;
+      await Projetos.deletar(id);
+      mostrarToast('Projeto excluído!');
+      carregarMeusProjetos();
+    }
+
+    function mostrarToast(msg, tipo = 'ok') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (tipo === 'erro' ? ' error' : '');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    init();
+  </script>
+
+</body>
+</html>

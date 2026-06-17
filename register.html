@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar Conta · Sertão Maker</title>
+  <link rel="stylesheet" href="css/auth.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+</head>
+<body>
+
+  <div class="auth-wrapper">
+    <div class="auth-logo">
+      <img src="assets/logo.jpg" alt="Sertão Maker">
+    </div>
+
+    <div class="auth-card">
+      <h2>Criar conta</h2>
+      <p class="sub">Preencha seus dados institucionais para se cadastrar.</p>
+
+      <div class="auth-error" id="erroGeral"></div>
+
+      <div class="form-group">
+        <label>Você é:</label>
+      </div>
+
+      <div class="tipo-grupo">
+        <label class="tipo-opcao">
+          <input type="radio" name="tipo" value="discente" checked>
+          <div class="icon">🎓</div>
+          <div class="label">Discente</div>
+        </label>
+        <label class="tipo-opcao">
+          <input type="radio" name="tipo" value="docente">
+          <div class="icon">👨‍🏫</div>
+          <div class="label">Docente</div>
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label>Nome completo</label>
+        <input type="text" id="nome" placeholder="Seu nome completo">
+        <div class="field-error" id="erroNome">Nome obrigatório</div>
+      </div>
+
+      <div class="form-group">
+        <label>Matrícula</label>
+        <input type="text" id="matricula" placeholder="Ex: 20231XXXXX">
+        <div class="field-error" id="erroMatricula">Matrícula obrigatória</div>
+      </div>
+
+      <div class="form-group">
+        <label>Curso / Departamento</label>
+        <input type="text" id="curso" placeholder="Ex: Técnico em Informática">
+        <div class="field-error" id="erroCurso">Campo obrigatório</div>
+      </div>
+
+      <div class="form-group">
+        <label>E-mail institucional</label>
+        <input type="email" id="email" placeholder="seu@email.edu.br">
+        <div class="field-error" id="erroEmail">E-mail inválido</div>
+      </div>
+
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="senha" placeholder="Mínimo 6 caracteres">
+        <div class="field-error" id="erroSenha">Senha deve ter ao menos 6 caracteres</div>
+      </div>
+
+      <div class="form-group">
+        <label>Confirmar senha</label>
+        <input type="password" id="confirmarSenha" placeholder="Repita a senha">
+        <div class="field-error" id="erroConfirmar">As senhas não coincidem</div>
+      </div>
+
+      <button class="btn-auth" id="btnCadastrar" onclick="fazerCadastro()">Criar conta</button>
+
+      <div class="auth-link">
+        Já tem conta? <a href="login.html">Entrar</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function fazerCadastro() {
+      const nome = document.getElementById('nome').value.trim();
+      const matricula = document.getElementById('matricula').value.trim();
+      const curso = document.getElementById('curso').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value;
+      const confirmar = document.getElementById('confirmarSenha').value;
+      const tipo = document.querySelector('input[name="tipo"]:checked').value;
+      const btn = document.getElementById('btnCadastrar');
+      const erroGeral = document.getElementById('erroGeral');
+
+      let valido = true;
+
+      const validar = (id, erroId, condicao) => {
+        if (!condicao) {
+          document.getElementById(id).classList.add('error');
+          document.getElementById(erroId).classList.add('show');
+          valido = false;
+        } else {
+          document.getElementById(id).classList.remove('error');
+          document.getElementById(erroId).classList.remove('show');
+        }
+      };
+
+      validar('nome', 'erroNome', nome.length > 2);
+      validar('matricula', 'erroMatricula', matricula.length > 2);
+      validar('curso', 'erroCurso', curso.length > 2);
+      validar('email', 'erroEmail', email.includes('@'));
+      validar('senha', 'erroSenha', senha.length >= 6);
+      validar('confirmarSenha', 'erroConfirmar', senha === confirmar);
+
+      if (!valido) return;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading-spinner"></span>Criando conta...';
+      erroGeral.classList.remove('show');
+
+      try {
+        await Auth.registrar(nome, email, senha, tipo, matricula, curso);
+        alert('Conta criada com sucesso! Você já pode entrar.');
+        window.location.href = 'login.html';
+      } catch (err) {
+        erroGeral.textContent = err.message || 'Erro ao criar conta. Tente novamente.';
+        erroGeral.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Criar conta';
+      }
+    }
+  </script>
+
+</body>
+</html>

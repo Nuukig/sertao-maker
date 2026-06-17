@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sertão Maker</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/projects.js"></script>
+</head>
+<body>
+
+  <header>
+    <div class="inner">
+      <img src="assets/logo.jpg" alt="Sertão Maker" class="logo">
+      <nav>
+        <a href="index.html" class="active">Projetos</a>
+        <a href="novo-projeto.html">Publicar Projeto</a>
+        <a href="meus-projetos.html">Meus Projetos</a>
+      </nav>
+      <div class="user-menu">
+        <div class="avatar" id="avatarLetra"></div>
+        <span id="nomeUsuario" style="font-size:14px;font-weight:500"></span>
+        <button class="btn btn-outline btn-sm" onclick="Auth.logout()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <h1>Projetos do Sertão Maker 🌵</h1>
+        <p>Explore, baixe e compartilhe projetos de impressão 3D, CNC, corte a laser e muito mais.</p>
+        <a href="novo-projeto.html" class="btn btn-primary" style="background:white;color:var(--verde-escuro)">+ Publicar meu projeto</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat">
+          <div class="num" id="totalProjetos">—</div>
+          <div class="label">Projetos</div>
+        </div>
+        <div class="stat">
+          <div class="num" id="totalAutores">—</div>
+          <div class="label">Autores</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="main-content">
+    <div class="container">
+
+      <div class="search-bar">
+        <input type="text" id="campoBusca" placeholder="Buscar projetos por nome..." oninput="debounceBusca()">
+        <button class="btn btn-primary" onclick="carregarProjetos()">Buscar</button>
+      </div>
+
+      <div class="filtros" id="filtrosCategorias">
+        <button class="filtro-btn ativo" onclick="filtrarCategoria('todos', this)">Todos</button>
+      </div>
+
+      <h2 class="section-title">Projetos publicados</h2>
+      <p class="section-sub" id="subTitulo">Carregando...</p>
+
+      <div id="loader" class="page-loader"><div class="spinner"></div></div>
+      <div class="grid-projetos" id="gridProjetos" style="display:none"></div>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <div class="icon">📭</div>
+        <p>Nenhum projeto encontrado.</p>
+      </div>
+
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalConteudo"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <footer>
+    <span>Sertão Maker</span> — Laboratório de Fabricação Digital · Todos os direitos reservados
+  </footer>
+
+  <script>
+    let usuarioAtual = null;
+    let categoriaAtiva = 'todos';
+    let buscaTimeout = null;
+
+    async function init() {
+      const user = await Auth.exigirLogin();
+      if (!user) return;
+      usuarioAtual = await Auth.getUsuarioAtual();
+      if (usuarioAtual) {
+        document.getElementById('avatarLetra').textContent = usuarioAtual.nome[0].toUpperCase();
+        document.getElementById('nomeUsuario').textContent = usuarioAtual.nome.split(' ')[0];
+      }
+      renderFiltros();
+      await carregarProjetos();
+      await carregarStats();
+    }
+
+    function renderFiltros() {
+      const cont = document.getElementById('filtrosCategorias');
+      Projetos.categorias.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'filtro-btn';
+        btn.textContent = `${cat.icone} ${cat.label}`;
+        btn.onclick = () => filtrarCategoria(cat.id, btn);
+        cont.appendChild(btn);
+      });
+    }
+
+    function filtrarCategoria(id, btn) {
+      categoriaAtiva = id;
+      document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('ativo'));
+      btn.classList.add('ativo');
+      carregarProjetos();
+    }
+
+    function debounceBusca() {
+      clearTimeout(buscaTimeout);
+      buscaTimeout = setTimeout(carregarProjetos, 400);
+    }
+
+    async function carregarProjetos() {
+      document.getElementById('loader').style.display = 'flex';
+      document.getElementById('gridProjetos').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'none';
+
+      const busca = document.getElementById('campoBusca').value.trim();
+      const projetos = await Projetos.listar({ categoria: categoriaAtiva, busca });
+
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('subTitulo').textContent = `${projetos.length} projeto(s) encontrado(s)`;
+
+      if (projetos.length === 0) {
+        document.getElementById('emptyState').style.display = 'block';
+        return;
+      }
+
+      const grid = document.getElementById('gridProjetos');
+      grid.innerHTML = projetos.map(p => Projetos.renderCard(p, usuarioAtual?.id)).join('');
+      grid.style.display = 'grid';
+    }
+
+    async function carregarStats() {
+      const { data } = await supabaseClient.from('projetos').select('usuario_id');
+      if (data) {
+        document.getElementById('totalProjetos').textContent = data.length;
+        const unicos = new Set(data.map(p => p.usuario_id)).size;
+        document.getElementById('totalAutores').textContent = unicos;
+      }
+    }
+
+    async function abrirProjeto(id) {
+      const overlay = document.getElementById('modalOverlay');
+      const modal = document.getElementById('modalConteudo');
+      modal.innerHTML = '<div style="padding:40px;text-align:center"><div class="spinner" style="margin:0 auto"></div></div>';
+      overlay.classList.add('show');
+      const projeto = await Projetos.buscarPorId(id);
+      modal.innerHTML = Projetos.renderModal(projeto);
+    }
+
+    function fecharModal() {
+      document.getElementById('modalOverlay').classList.remove('show');
+    }
+
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+      if (e.target === this) fecharModal();
+    });
+
+    async function confirmarDelecao(id, e) {
+      e.stopPropagation();
+      if (!confirm('Tem certeza que deseja excluir este projeto?')) return;
+      await Projetos.deletar(id);
+      mostrarToast('Projeto excluído!');
+      carregarProjetos();
+    }
+
+    function mostrarToast(msg, tipo = 'ok') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (tipo === 'erro' ? ' error' : '');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    init();
+  </script>
+
+</body>
+</html>
