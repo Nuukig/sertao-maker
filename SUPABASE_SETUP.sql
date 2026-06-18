@@ -1,14 +1,15 @@
-create table perfis (
+create table if not exists perfis (
   id uuid references auth.users on delete cascade primary key,
   nome text not null,
   email text not null,
-  tipo text check (tipo in ('discente', 'docente')) not null,
+  tipo text check (tipo in ('discente', 'docente')) not null default 'discente',
   matricula text,
   curso text,
+  avatar text,
   criado_em timestamp with time zone default timezone('utc'::text, now())
 );
 
-create table projetos (
+create table if not exists projetos (
   id uuid default gen_random_uuid() primary key,
   titulo text not null,
   descricao text,
@@ -27,6 +28,9 @@ create policy "Qualquer um pode ver perfis"
 
 create policy "Usuario pode inserir proprio perfil"
   on perfis for insert with check (auth.uid() = id);
+
+create policy "Usuario pode atualizar proprio perfil"
+  on perfis for update using (auth.uid() = id);
 
 create policy "Qualquer um pode ver projetos"
   on projetos for select using (true);

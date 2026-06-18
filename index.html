@@ -23,8 +23,8 @@
         <a href="meus-projetos.html">Meus Projetos</a>
       </nav>
       <div class="user-menu">
-        <div class="avatar" id="avatarLetra"></div>
-        <span id="nomeUsuario" style="font-size:14px;font-weight:500"></span>
+        <img id="avatarImg" style="width:36px;height:36px;border-radius:50%;display:none;object-fit:cover">
+        <div class="avatar" id="avatarLetra" style="display:none"></div>
         <button class="btn btn-outline btn-sm" onclick="Auth.logout()">Sair</button>
       </div>
     </div>
@@ -95,8 +95,13 @@
       if (!user) return;
       usuarioAtual = await Auth.getUsuarioAtual();
       if (usuarioAtual) {
-        document.getElementById('avatarLetra').textContent = usuarioAtual.nome[0].toUpperCase();
-        document.getElementById('nomeUsuario').textContent = usuarioAtual.nome.split(' ')[0];
+        if (usuarioAtual.avatar) {
+          document.getElementById('avatarImg').src = usuarioAtual.avatar;
+          document.getElementById('avatarImg').style.display = 'block';
+        } else {
+          document.getElementById('avatarLetra').textContent = usuarioAtual.nome[0].toUpperCase();
+          document.getElementById('avatarLetra').style.display = 'flex';
+        }
       }
       renderFiltros();
       await carregarProjetos();

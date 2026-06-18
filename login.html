@@ -5,6 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Entrar · Sertão Maker</title>
   <link rel="stylesheet" href="css/auth.css">
+  <style>
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 14px;
+      background: white;
+      border: 2px solid #ddd;
+      border-radius: var(--radius);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+    .btn-google:hover {
+      border-color: #4285f4;
+      box-shadow: 0 2px 8px rgba(66,133,244,0.2);
+    }
+    .btn-google img {
+      width: 22px;
+      height: 22px;
+    }
+    .divisor {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: #aaa;
+      font-size: 13px;
+    }
+    .divisor::before, .divisor::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #eee;
+    }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
@@ -17,28 +59,21 @@
     </div>
 
     <div class="auth-card">
-      <h2>Bem-vindo de volta!</h2>
-      <p class="sub">Entre com sua conta institucional para acessar os projetos.</p>
+      <h2>Bem-vindo ao Sertão Maker!</h2>
+      <p class="sub">Entre com sua conta Google institucional para acessar e compartilhar projetos.</p>
 
       <div class="auth-error" id="erroGeral"></div>
 
-      <div class="form-group">
-        <label>E-mail institucional</label>
-        <input type="email" id="email" placeholder="seu@email.edu.br" autocomplete="email">
-        <div class="field-error" id="erroEmail">E-mail inválido</div>
-      </div>
+      <button class="btn-google" id="btnGoogle" onclick="entrarComGoogle()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+        Entrar com Google
+      </button>
 
-      <div class="form-group">
-        <label>Senha</label>
-        <input type="password" id="senha" placeholder="Sua senha" autocomplete="current-password">
-        <div class="field-error" id="erroSenha">Senha obrigatória</div>
-      </div>
+      <div class="divisor">acesso restrito à instituição</div>
 
-      <button class="btn-auth" id="btnEntrar" onclick="fazerLogin()">Entrar</button>
-
-      <div class="auth-link">
-        Não tem conta? <a href="register.html">Criar conta</a>
-      </div>
+      <p style="font-size:12px;color:#999;text-align:center;line-height:1.6">
+        Ao entrar, você concorda em usar o sistema apenas para fins acadêmicos e de pesquisa do Sertão Maker.
+      </p>
     </div>
   </div>
 
@@ -49,50 +84,19 @@
     }
     verificarSessao();
 
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Enter') fazerLogin();
-    });
-
-    async function fazerLogin() {
-      const email = document.getElementById('email').value.trim();
-      const senha = document.getElementById('senha').value;
-      const btn = document.getElementById('btnEntrar');
-      const erroGeral = document.getElementById('erroGeral');
-
-      let valido = true;
-
-      if (!email || !email.includes('@')) {
-        document.getElementById('erroEmail').classList.add('show');
-        document.getElementById('email').classList.add('error');
-        valido = false;
-      } else {
-        document.getElementById('erroEmail').classList.remove('show');
-        document.getElementById('email').classList.remove('error');
-      }
-
-      if (!senha) {
-        document.getElementById('erroSenha').classList.add('show');
-        document.getElementById('senha').classList.add('error');
-        valido = false;
-      } else {
-        document.getElementById('erroSenha').classList.remove('show');
-        document.getElementById('senha').classList.remove('error');
-      }
-
-      if (!valido) return;
-
+    async function entrarComGoogle() {
+      const btn = document.getElementById('btnGoogle');
+      const erro = document.getElementById('erroGeral');
       btn.disabled = true;
-      btn.innerHTML = '<span class="loading-spinner"></span>Entrando...';
-      erroGeral.classList.remove('show');
-
+      btn.innerHTML = '<span class="loading-spinner" style="border-color:rgba(0,0,0,0.2);border-top-color:#333"></span>Redirecionando...';
+      erro.classList.remove('show');
       try {
-        await Auth.login(email, senha);
-        window.location.href = 'index.html';
+        await Auth.loginComGoogle();
       } catch (err) {
-        erroGeral.textContent = 'E-mail ou senha incorretos. Tente novamente.';
-        erroGeral.classList.add('show');
+        erro.textContent = 'Erro ao conectar com Google. Tente novamente.';
+        erro.classList.add('show');
         btn.disabled = false;
-        btn.textContent = 'Entrar';
+        btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width:22px">Entrar com Google';
       }
     }
   </script>

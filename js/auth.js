@@ -1,35 +1,12 @@
 const Auth = {
-  async login(email, senha) {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password: senha
-    });
-    if (error) throw error;
-    return data;
-  },
-
-  async registrar(nome, email, senha, tipo, matricula, curso) {
-    const { data, error } = await supabaseClient.auth.signUp({
-      email,
-      password: senha,
+  async loginComGoogle() {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
       options: {
-        data: { nome, tipo, matricula, curso }
+        redirectTo: window.location.origin + '/index.html'
       }
     });
     if (error) throw error;
-
-    if (data.user) {
-      await supabaseClient.from('perfis').insert({
-        id: data.user.id,
-        nome,
-        email,
-        tipo,
-        matricula,
-        curso
-      });
-    }
-
-    return data;
   },
 
   async logout() {
@@ -47,6 +24,21 @@ const Auth = {
       .select('*')
       .eq('id', user.id)
       .single();
+
+    if (!perfil) {
+      const nome = user.user_metadata?.full_name || user.email;
+      const avatar = user.user_metadata?.avatar_url || null;
+      await supabaseClient.from('perfis').insert({
+        id: user.id,
+        nome,
+        email: user.email,
+        tipo: 'discente',
+        matricula: '',
+        curso: '',
+        avatar
+      });
+      return { id: user.id, nome, email: user.email, tipo: 'discente', avatar };
+    }
 
     return perfil;
   },
