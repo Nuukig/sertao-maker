@@ -1,8 +1,8 @@
-const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
-const SUPABASE_ANON_KEY = 'SUA_ANON_KEY_AQUI';
+const SUPABASE_URL = process.env.URL_SUPABASE;
+const SUPABASE_ANON_KEY = process.env.KEY_SUPABASE;
 
-const GOOGLE_DRIVE_FOLDER_ID = 'ID_DA_PASTA_NO_DRIVE';
-const GOOGLE_API_KEY = 'SUA_GOOGLE_API_KEY';
-const GOOGLE_CLIENT_ID = 'SEU_GOOGLE_CLIENT_ID';
+const GOOGLE_DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
