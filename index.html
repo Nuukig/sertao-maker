@@ -136,20 +136,27 @@
       document.getElementById('gridProjetos').style.display = 'none';
       document.getElementById('emptyState').style.display = 'none';
 
-      const busca = document.getElementById('campoBusca').value.trim();
-      const projetos = await Projetos.listar({ categoria: categoriaAtiva, busca });
+      try {
+        const busca = document.getElementById('campoBusca').value.trim();
+        const projetos = await Projetos.listar({ categoria: categoriaAtiva, busca });
 
-      document.getElementById('loader').style.display = 'none';
-      document.getElementById('subTitulo').textContent = `${projetos.length} projeto(s) encontrado(s)`;
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('subTitulo').textContent = `${projetos.length} projeto(s) encontrado(s)`;
 
-      if (projetos.length === 0) {
+        if (projetos.length === 0) {
+          document.getElementById('emptyState').style.display = 'block';
+          document.getElementById('emptyState').innerHTML = '<div class="icon">🌵</div><p>Nenhum projeto publicado ainda.<br>Seja o primeiro!</p><br><a href="novo-projeto.html" class="btn btn-primary">Publicar projeto</a>';
+          return;
+        }
+
+        const grid = document.getElementById('gridProjetos');
+        grid.innerHTML = projetos.map(p => Projetos.renderCard(p, usuarioAtual?.id)).join('');
+        grid.style.display = 'grid';
+      } catch (err) {
+        document.getElementById('loader').style.display = 'none';
         document.getElementById('emptyState').style.display = 'block';
-        return;
+        document.getElementById('emptyState').innerHTML = '<div class="icon">⚠️</div><p>Erro ao carregar projetos.<br>Verifique sua conexão e tente novamente.</p>';
       }
-
-      const grid = document.getElementById('gridProjetos');
-      grid.innerHTML = projetos.map(p => Projetos.renderCard(p, usuarioAtual?.id)).join('');
-      grid.style.display = 'grid';
     }
 
     async function carregarStats() {
