@@ -3,6 +3,7 @@ const Projetos = {
     { id: 'impressao3d', label: 'Impressão 3D', icone: '🖨️' },
     { id: 'cnc', label: 'CNC', icone: '⚙️' },
     { id: 'laser', label: 'Corte a Laser', icone: '🔆' },
+    { id: 'rdworks', label: 'RDWorks', icone: '💡' },
     { id: 'eletronica', label: 'Eletrônica', icone: '🔌' },
     { id: 'robotica', label: 'Robótica', icone: '🤖' },
     { id: 'outro', label: 'Outro', icone: '🔧' }
