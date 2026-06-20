@@ -12,23 +12,41 @@
     .page-form h1 { font-size: 24px; font-weight: 700; color: var(--verde-escuro); margin-bottom: 4px; }
     .page-form .sub { font-size: 14px; color: #777; margin-bottom: 32px; }
     .form-card { background: white; border-radius: var(--radius-lg); box-shadow: 0 2px 16px rgba(0,0,0,0.07); padding: 32px; }
-    .upload-area { border: 2px dashed #ddd; border-radius: var(--radius); padding: 32px; text-align: center; cursor: pointer; transition: border-color 0.2s; background: #fafafa; }
+    .form-section { margin-bottom: 28px; }
+    .form-section h3 { font-size: 15px; font-weight: 600; color: var(--verde-escuro); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1.5px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+    .form-section h3 .limite { font-size: 12px; font-weight: 400; color: #999; margin-left: auto; }
+
+    /* Upload Area */
+    .upload-area { border: 2px dashed #ddd; border-radius: var(--radius); padding: 24px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; background: #fafafa; }
     .upload-area:hover, .upload-area.drag { border-color: var(--verde); background: #f0faf0; }
-    .upload-area .icon { font-size: 36px; margin-bottom: 8px; }
-    .upload-area p { font-size: 14px; color: #666; }
+    .upload-area .icon { font-size: 32px; margin-bottom: 8px; }
+    .upload-area p { font-size: 14px; color: #666; margin: 0 0 4px; }
     .upload-area span { font-size: 12px; color: #999; }
     .upload-area input { display: none; }
-    .preview-img { width: 100%; max-height: 240px; object-fit: cover; border-radius: var(--radius); margin-top: 12px; display: none; }
-    .arquivo-nome { font-size: 13px; color: var(--verde-escuro); font-weight: 600; margin-top: 10px; display: none; }
+
+    /* Grid de imagens */
+    .imagens-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 14px; }
+    .img-thumb { position: relative; aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; border: 1.5px solid #eee; }
+    .img-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .img-thumb .remover { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+    .img-thumb .remover:hover { background: #e53e3e; }
+
+    /* Lista de arquivos */
+    .arquivos-lista { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .arquivo-item { display: flex; align-items: center; gap: 10px; background: #f8f8f8; border-radius: var(--radius); padding: 10px 14px; font-size: 13px; }
+    .arquivo-item .nome { flex: 1; color: var(--verde-escuro); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .arquivo-item .tamanho { color: #999; font-size: 12px; white-space: nowrap; }
+    .arquivo-item .remover-arq { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; padding: 0; }
+    .arquivo-item .remover-arq:hover { color: #e53e3e; }
+
     .progress-bar { height: 6px; background: #eee; border-radius: 3px; margin-top: 16px; display: none; overflow: hidden; }
     .progress-fill { height: 100%; background: var(--verde); border-radius: 3px; width: 0%; transition: width 0.3s; }
-    .form-section { margin-bottom: 24px; }
-    .form-section h3 { font-size: 15px; font-weight: 600; color: var(--verde-escuro); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1.5px solid #f0f0f0; }
+    .status-upload { font-size: 13px; color: #666; margin-top: 8px; text-align: center; display: none; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
-  <script src="js/drive.js"></script>
+  <script src="js/storage.js"></script>
   <script src="js/projects.js"></script>
 </head>
 <body>
@@ -55,6 +73,7 @@
 
     <div class="form-card">
 
+      <!-- Informações -->
       <div class="form-section">
         <h3>📋 Informações do projeto</h3>
 
@@ -65,7 +84,9 @@
 
         <div class="form-group">
           <label>Descrição</label>
-          <textarea id="descricao" placeholder="Descreva o projeto, materiais usados, configurações..." rows="4" style="width:100%;padding:11px 14px;border:1.5px solid #ddd;border-radius:var(--radius);font-family:Inter,sans-serif;font-size:14px;resize:vertical;transition:border-color 0.2s" onfocus="this.style.borderColor='var(--verde)'" onblur="this.style.borderColor='#ddd'"></textarea>
+          <textarea id="descricao" placeholder="Descreva o projeto, materiais usados, configurações..." rows="4"
+            style="width:100%;padding:11px 14px;border:1.5px solid #ddd;border-radius:var(--radius);font-family:Inter,sans-serif;font-size:14px;resize:vertical;transition:border-color 0.2s"
+            onfocus="this.style.borderColor='var(--verde)'" onblur="this.style.borderColor='#ddd'"></textarea>
         </div>
 
         <div class="form-group">
@@ -76,30 +97,36 @@
         </div>
       </div>
 
+      <!-- Imagens -->
       <div class="form-section">
-        <h3>🖼️ Imagem do projeto</h3>
-        <div class="upload-area" id="uploadImgArea" onclick="document.getElementById('inputImagem').click()" ondragover="dragOver(event,'uploadImgArea')" ondrop="dropImagem(event)">
-          <input type="file" id="inputImagem" accept="image/*" onchange="previewImagem(this)">
+        <h3>🖼️ Imagens do projeto <span class="limite" id="contagemImagens">0 / 5</span></h3>
+        <div class="upload-area" id="uploadImgArea" onclick="document.getElementById('inputImagens').click()"
+          ondragover="dragOver(event,'uploadImgArea')" ondrop="dropImagens(event)">
+          <input type="file" id="inputImagens" accept="image/*" multiple onchange="adicionarImagens(this.files)">
           <div class="icon">📷</div>
-          <p>Clique ou arraste uma foto do projeto</p>
-          <span>JPG, PNG, WEBP — máx. 10MB</span>
+          <p>Clique ou arraste fotos do projeto</p>
+          <span>JPG, PNG, WEBP — máx. 10MB cada — até 5 imagens</span>
         </div>
-        <img id="previewImg" class="preview-img">
+        <div class="imagens-grid" id="imagensGrid"></div>
       </div>
 
+      <!-- Arquivos -->
       <div class="form-section">
-        <h3>📁 Arquivo do projeto</h3>
-        <div class="upload-area" id="uploadArqArea" onclick="document.getElementById('inputArquivo').click()" ondragover="dragOver(event,'uploadArqArea')" ondrop="dropArquivo(event)">
-          <input type="file" id="inputArquivo" accept=".stl,.obj,.gcode,.svg,.dxf,.ai,.step,.iges,.f3d,.zip,.pdf,.rd,.rld" onchange="mostrarArquivo(this)">
+        <h3>📁 Arquivos do projeto <span class="limite" id="contagemArquivos">0 / 3</span></h3>
+        <div class="upload-area" id="uploadArqArea" onclick="document.getElementById('inputArquivos').click()"
+          ondragover="dragOver(event,'uploadArqArea')" ondrop="dropArquivos(event)">
+          <input type="file" id="inputArquivos" accept=".stl,.obj,.gcode,.svg,.dxf,.ai,.step,.iges,.f3d,.zip,.pdf,.rd,.rld" multiple onchange="adicionarArquivos(this.files)">
           <div class="icon">📦</div>
-          <p>Clique ou arraste o arquivo do projeto</p>
-          <span>STL, OBJ, GCODE, SVG, DXF, STEP, F3D, RD, RLD, ZIP, PDF — máx. 100MB</span>
+          <p>Clique ou arraste os arquivos do projeto</p>
+          <span>STL, OBJ, GCODE, SVG, DXF, STEP, F3D, RD, RLD, ZIP, PDF — máx. 100MB cada — até 3 arquivos</span>
         </div>
-        <div class="arquivo-nome" id="nomeArquivo"></div>
-        <div class="progress-bar" id="progressBar">
-          <div class="progress-fill" id="progressFill"></div>
-        </div>
+        <div class="arquivos-lista" id="arquivosLista"></div>
       </div>
+
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="status-upload" id="statusUpload"></div>
 
       <div class="auth-error" id="erroGeral"></div>
 
@@ -112,8 +139,13 @@
 
   <script>
     let usuarioAtual = null;
-    let arquivoImagem = null;
-    let arquivoProjeto = null;
+    let listaImagens = []; // { file, url }
+    let listaArquivos = []; // { file }
+
+    const MAX_IMAGENS = 5;
+    const MAX_ARQUIVOS = 3;
+    const MAX_IMG_MB = 10;
+    const MAX_ARQ_MB = 100;
 
     async function init() {
       const user = await Auth.exigirLogin();
@@ -129,8 +161,6 @@
         }
       }
 
-      await Drive.inicializar();
-
       const sel = document.getElementById('categoria');
       Projetos.categorias.forEach(c => {
         const opt = document.createElement('option');
@@ -140,116 +170,182 @@
       });
     }
 
-    function previewImagem(input) {
-      const file = input.files[0];
-      if (!file) return;
-      arquivoImagem = file;
-      const preview = document.getElementById('previewImg');
-      preview.src = URL.createObjectURL(file);
-      preview.style.display = 'block';
+    // ── Imagens ────────────────────────────────────────────
+    function adicionarImagens(files) {
+      for (const file of files) {
+        if (listaImagens.length >= MAX_IMAGENS) {
+          mostrarErro(`Máximo de ${MAX_IMAGENS} imagens atingido.`); break;
+        }
+        if (file.size > MAX_IMG_MB * 1024 * 1024) {
+          mostrarErro(`"${file.name}" é maior que ${MAX_IMG_MB}MB.`); continue;
+        }
+        if (!file.type.startsWith('image/')) {
+          mostrarErro(`"${file.name}" não é uma imagem.`); continue;
+        }
+        listaImagens.push({ file, url: URL.createObjectURL(file) });
+      }
+      renderImagens();
+      document.getElementById('inputImagens').value = '';
     }
 
-    function mostrarArquivo(input) {
-      const file = input.files[0];
-      if (!file) return;
-      arquivoProjeto = file;
-      const el = document.getElementById('nomeArquivo');
-      el.textContent = `✅ ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`;
-      el.style.display = 'block';
+    function renderImagens() {
+      const grid = document.getElementById('imagensGrid');
+      const contador = document.getElementById('contagemImagens');
+      contador.textContent = `${listaImagens.length} / ${MAX_IMAGENS}`;
+      grid.innerHTML = '';
+      listaImagens.forEach((img, i) => {
+        const div = document.createElement('div');
+        div.className = 'img-thumb';
+        div.innerHTML = `
+          <img src="${img.url}" alt="Imagem ${i+1}">
+          <button class="remover" onclick="removerImagem(${i})" title="Remover">✕</button>
+        `;
+        grid.appendChild(div);
+      });
+      const area = document.getElementById('uploadImgArea');
+      area.style.display = listaImagens.length >= MAX_IMAGENS ? 'none' : 'block';
     }
 
+    function removerImagem(i) {
+      URL.revokeObjectURL(listaImagens[i].url);
+      listaImagens.splice(i, 1);
+      renderImagens();
+    }
+
+    // ── Arquivos ────────────────────────────────────────────
+    function adicionarArquivos(files) {
+      for (const file of files) {
+        if (listaArquivos.length >= MAX_ARQUIVOS) {
+          mostrarErro(`Máximo de ${MAX_ARQUIVOS} arquivos atingido.`); break;
+        }
+        if (file.size > MAX_ARQ_MB * 1024 * 1024) {
+          mostrarErro(`"${file.name}" é maior que ${MAX_ARQ_MB}MB.`); continue;
+        }
+        listaArquivos.push({ file });
+      }
+      renderArquivos();
+      document.getElementById('inputArquivos').value = '';
+    }
+
+    function renderArquivos() {
+      const lista = document.getElementById('arquivosLista');
+      const contador = document.getElementById('contagemArquivos');
+      contador.textContent = `${listaArquivos.length} / ${MAX_ARQUIVOS}`;
+      lista.innerHTML = '';
+      listaArquivos.forEach((arq, i) => {
+        const mb = (arq.file.size / 1024 / 1024).toFixed(1);
+        const div = document.createElement('div');
+        div.className = 'arquivo-item';
+        div.innerHTML = `
+          <span>📦</span>
+          <span class="nome" title="${arq.file.name}">${arq.file.name}</span>
+          <span class="tamanho">${mb}MB</span>
+          <button class="remover-arq" onclick="removerArquivo(${i})" title="Remover">✕</button>
+        `;
+        lista.appendChild(div);
+      });
+      const area = document.getElementById('uploadArqArea');
+      area.style.display = listaArquivos.length >= MAX_ARQUIVOS ? 'none' : 'block';
+    }
+
+    function removerArquivo(i) {
+      listaArquivos.splice(i, 1);
+      renderArquivos();
+    }
+
+    // ── Drag & Drop ─────────────────────────────────────────
     function dragOver(e, id) {
       e.preventDefault();
       document.getElementById(id).classList.add('drag');
     }
 
-    function dropImagem(e) {
+    function dropImagens(e) {
       e.preventDefault();
       document.getElementById('uploadImgArea').classList.remove('drag');
-      const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) {
-        const input = document.getElementById('inputImagem');
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        input.files = dt.files;
-        previewImagem(input);
-      }
+      adicionarImagens(e.dataTransfer.files);
     }
 
-    function dropArquivo(e) {
+    function dropArquivos(e) {
       e.preventDefault();
       document.getElementById('uploadArqArea').classList.remove('drag');
-      const file = e.dataTransfer.files[0];
-      if (file) {
-        const input = document.getElementById('inputArquivo');
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        input.files = dt.files;
-        mostrarArquivo(input);
+      adicionarArquivos(e.dataTransfer.files);
+    }
+
+    // ── Progress ────────────────────────────────────────────
+    function setProgress(pct, msg) {
+      document.getElementById('progressBar').style.display = 'block';
+      document.getElementById('progressFill').style.width = pct + '%';
+      if (msg) {
+        const s = document.getElementById('statusUpload');
+        s.textContent = msg;
+        s.style.display = 'block';
       }
     }
 
-    function setProgress(pct) {
-      document.getElementById('progressBar').style.display = 'block';
-      document.getElementById('progressFill').style.width = pct + '%';
-    }
-
+    // ── Publicar ─────────────────────────────────────────────
     async function publicarProjeto() {
       const titulo = document.getElementById('titulo').value.trim();
       const descricao = document.getElementById('descricao').value.trim();
       const categoria = document.getElementById('categoria').value;
-      const erroGeral = document.getElementById('erroGeral');
       const btn = document.getElementById('btnPublicar');
 
       if (!titulo || !categoria) {
-        erroGeral.textContent = 'Preencha o título e a categoria do projeto.';
-        erroGeral.classList.add('show');
+        mostrarErro('Preencha o título e a categoria do projeto.');
         return;
       }
 
-      erroGeral.classList.remove('show');
+      document.getElementById('erroGeral').classList.remove('show');
       btn.disabled = true;
       btn.innerHTML = '<span class="loading-spinner"></span>Publicando...';
 
       try {
-        let imagem_drive_id = null;
-        let arquivo_drive_id = null;
+        const projetoId = crypto.randomUUID();
 
-        if (arquivoImagem) {
-          btn.innerHTML = '<span class="loading-spinner"></span>Enviando imagem...';
-          setProgress(20);
-          const res = await Drive.fazerUploadImagem(arquivoImagem);
-          imagem_drive_id = res.id;
-          setProgress(50);
+        // Upload imagens
+        const imagensPaths = [];
+        for (let i = 0; i < listaImagens.length; i++) {
+          setProgress(Math.round((i / (listaImagens.length + listaArquivos.length)) * 80), `Enviando imagem ${i+1} de ${listaImagens.length}...`);
+          const res = await Storage.uploadImagem(listaImagens[i].file, projetoId);
+          imagensPaths.push(res.path);
         }
 
-        if (arquivoProjeto) {
-          btn.innerHTML = '<span class="loading-spinner"></span>Enviando arquivo...';
-          setProgress(70);
-          const res = await Drive.fazerUploadProjeto(arquivoProjeto);
-          arquivo_drive_id = res.id;
-          setProgress(90);
+        // Upload arquivos
+        const arquivosPaths = [];
+        for (let i = 0; i < listaArquivos.length; i++) {
+          setProgress(Math.round(((listaImagens.length + i) / (listaImagens.length + listaArquivos.length)) * 80 + 10), `Enviando arquivo ${i+1} de ${listaArquivos.length}...`);
+          const res = await Storage.uploadArquivo(listaArquivos[i].file, projetoId);
+          arquivosPaths.push(res.path);
         }
+
+        setProgress(90, 'Salvando projeto...');
 
         await Projetos.criar({
+          id: projetoId,
           titulo,
           descricao,
           categoria,
           usuario_id: usuarioAtual.id,
-          imagem_drive_id,
-          arquivo_drive_id
+          imagens: imagensPaths,
+          arquivos: arquivosPaths
         });
 
-        setProgress(100);
-        mostrarToast('Projeto publicado com sucesso!');
+        setProgress(100, 'Publicado com sucesso!');
+        mostrarToast('Projeto publicado com sucesso! 🎉');
         setTimeout(() => window.location.href = 'index.html', 1500);
 
       } catch (err) {
-        erroGeral.textContent = 'Erro ao publicar: ' + (err.message || 'Tente novamente.');
-        erroGeral.classList.add('show');
+        mostrarErro('Erro ao publicar: ' + (err.message || 'Tente novamente.'));
         btn.disabled = false;
         btn.textContent = '🚀 Publicar projeto';
+        document.getElementById('progressBar').style.display = 'none';
+        document.getElementById('statusUpload').style.display = 'none';
       }
+    }
+
+    function mostrarErro(msg) {
+      const el = document.getElementById('erroGeral');
+      el.textContent = msg;
+      el.classList.add('show');
     }
 
     function mostrarToast(msg) {
