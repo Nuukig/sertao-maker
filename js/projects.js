@@ -8,20 +8,15 @@ const Projetos = {
   async listar(filtros = {}) {
     let query = supabaseClient
       .from('projetos')
-      .select(`
-        *,
-        perfis (nome, tipo, matricula)
-      `)
+      .select('*, perfis (nome)')
       .order('criado_em', { ascending: false });
 
     if (filtros.categoria && filtros.categoria !== 'todos') {
       query = query.eq('categoria', filtros.categoria);
     }
-
     if (filtros.busca) {
       query = query.ilike('titulo', `%${filtros.busca}%`);
     }
-
     if (filtros.usuario_id) {
       query = query.eq('usuario_id', filtros.usuario_id);
     }
@@ -34,10 +29,7 @@ const Projetos = {
   async buscarPorId(id) {
     const { data, error } = await supabaseClient
       .from('projetos')
-      .select(`
-        *,
-        perfis (nome, tipo, matricula, curso)
-      `)
+      .select('*, perfis (nome)')
       .eq('id', id)
       .single();
     if (error) throw error;
@@ -72,35 +64,40 @@ const Projetos = {
     return cat ? cat.icone : '🔧';
   },
 
+  // Pega primeira imagem do array
+  primeiraImagem(projeto) {
+    if (projeto.imagens && projeto.imagens.length > 0) {
+      return Storage.urlImagem(projeto.imagens[0]);
+    }
+    return null;
+  },
+
   renderCard(projeto, usuarioAtualId) {
-    const temImagem = projeto.imagem_drive_id;
-    const imgSrc = temImagem ? Drive.urlImagem(projeto.imagem_drive_id) : null;
+    const imgSrc = this.primeiraImagem(projeto);
     const eProprietario = projeto.usuario_id === usuarioAtualId;
+    const temArquivo = projeto.arquivos && projeto.arquivos.length > 0;
 
     return `
       <div class="projeto-card" data-id="${projeto.id}">
-        ${temImagem
+        ${imgSrc
           ? `<img class="imagem" src="${imgSrc}" alt="${projeto.titulo}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
           : ''
         }
-        <div class="imagem-placeholder" ${temImagem ? 'style="display:none"' : ''}>
+        <div class="imagem-placeholder" ${imgSrc ? 'style="display:none"' : ''}>
           ${this.getIconeCategoria(projeto.categoria)}
         </div>
         <div class="info">
           <div class="titulo">${projeto.titulo}</div>
           <div class="descricao">${projeto.descricao || 'Sem descrição.'}</div>
           <div class="meta">
-            <div class="autor">
-              <span class="badge badge-${projeto.perfis?.tipo || 'discente'}">${projeto.perfis?.tipo || ''}</span>
-              <span>${projeto.perfis?.nome || 'Desconhecido'}</span>
-            </div>
+            <span>${projeto.perfis?.nome || 'Desconhecido'}</span>
             <span class="badge badge-categoria">${this.getLabelCategoria(projeto.categoria)}</span>
           </div>
         </div>
         <div class="rodape">
           <button class="btn btn-outline btn-sm" onclick="abrirProjeto('${projeto.id}')">Ver projeto</button>
-          ${projeto.arquivo_drive_id
-            ? `<a class="btn btn-primary btn-sm" href="${Drive.urlDownload(projeto.arquivo_drive_id)}" target="_blank">⬇ Baixar</a>`
+          ${temArquivo
+            ? `<a class="btn btn-primary btn-sm" href="${Storage.urlArquivo(projeto.arquivos[0])}" target="_blank">⬇ Baixar</a>`
             : ''
           }
           ${eProprietario
@@ -113,8 +110,25 @@ const Projetos = {
   },
 
   renderModal(projeto) {
-    const temImagem = projeto.imagem_drive_id;
-    const imgSrc = temImagem ? Drive.urlImagem(projeto.imagem_drive_id) : null;
+    const imagens = projeto.imagens || [];
+    const arquivos = projeto.arquivos || [];
+
+    const galeria = imagens.length > 0
+      ? `<div style="display:flex;gap:8px;overflow-x:auto;margin-bottom:20px;padding-bottom:4px">
+          ${imagens.map(path => `
+            <img src="${Storage.urlImagem(path)}" 
+              style="height:200px;min-width:200px;object-fit:cover;border-radius:10px;cursor:pointer"
+              onclick="this.style.height=this.style.height==='auto'?'200px':'auto'">`
+          ).join('')}
+        </div>`
+      : `<div class="imagem-placeholder" style="height:160px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;font-size:64px;margin-bottom:20px">${this.getIconeCategoria(projeto.categoria)}</div>`;
+
+    const listaArquivos = arquivos.length > 0
+      ? arquivos.map((path, i) => {
+          const nome = path.split('/').pop().replace(/^\d+_/, '');
+          return `<a class="btn btn-primary" href="${Storage.urlArquivo(path)}" target="_blank" style="margin-bottom:8px">⬇ Baixar arquivo ${arquivos.length > 1 ? i+1 : ''}: ${nome}</a>`;
+        }).join('')
+      : '<span style="color:#999;font-size:13px">Nenhum arquivo disponível para download.</span>';
 
     return `
       <div class="modal-header">
@@ -122,28 +136,18 @@ const Projetos = {
           <h2>${projeto.titulo}</h2>
           <div class="modal-meta">
             <span class="badge badge-categoria">${this.getLabelCategoria(projeto.categoria)}</span>
-            <span class="badge badge-${projeto.perfis?.tipo || 'discente'}">${projeto.perfis?.tipo || ''}</span>
           </div>
         </div>
         <button class="modal-close" onclick="fecharModal()">✕</button>
       </div>
       <div class="modal-body">
-        ${temImagem
-          ? `<img class="modal-img" src="${imgSrc}" alt="${projeto.titulo}">`
-          : `<div class="imagem-placeholder" style="height:200px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;font-size:64px;margin-bottom:20px">${this.getIconeCategoria(projeto.categoria)}</div>`
-        }
+        ${galeria}
         <p class="modal-descricao">${projeto.descricao || 'Sem descrição.'}</p>
         <div style="font-size:13px;color:#777;margin-bottom:20px">
-          <strong>Autor:</strong> ${projeto.perfis?.nome || 'Desconhecido'} &nbsp;|&nbsp;
-          <strong>Matrícula:</strong> ${projeto.perfis?.matricula || '-'} &nbsp;|&nbsp;
-          <strong>Curso:</strong> ${projeto.perfis?.curso || '-'}
+          <strong>Autor:</strong> ${projeto.perfis?.nome || 'Desconhecido'}
         </div>
-        <div class="modal-actions">
-          ${projeto.arquivo_drive_id
-            ? `<a class="btn btn-primary" href="${Drive.urlDownload(projeto.arquivo_drive_id)}" target="_blank">⬇ Baixar arquivo</a>
-               <a class="btn btn-outline" href="${Drive.urlVisualizacao(projeto.arquivo_drive_id)}" target="_blank">🔗 Ver no Drive</a>`
-            : '<span style="color:#999;font-size:13px">Nenhum arquivo disponível para download.</span>'
-          }
+        <div class="modal-actions" style="display:flex;flex-direction:column;align-items:flex-start">
+          ${listaArquivos}
         </div>
       </div>
     `;
