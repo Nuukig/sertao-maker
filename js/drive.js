@@ -1,5 +1,10 @@
 const Drive = {
 
+  // Mantido para compatibilidade - não faz nada pois usamos Service Account no backend
+  async inicializar() {
+    return Promise.resolve();
+  },
+
   async fazerUpload(arquivo, nomeArquivo, mimeType) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();

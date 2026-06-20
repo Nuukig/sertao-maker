@@ -1,7 +1,7 @@
 const { google } = require('googleapis');
 const { Readable } = require('stream');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -9,11 +9,20 @@ export default async function handler(req, res) {
   try {
     const { fileName, mimeType, fileBase64, folderId } = req.body;
 
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+    if (!fileName || !mimeType || !fileBase64) {
+      return res.status(400).json({ error: 'Parâmetros obrigatórios faltando' });
+    }
+
+    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    if (!serviceAccountJson) {
+      return res.status(500).json({ error: 'Credenciais do Google não configuradas' });
+    }
+
+    const credentials = JSON.parse(serviceAccountJson);
 
     const auth = new google.auth.GoogleAuth({
       credentials,
-      scopes: ['https://www.googleapis.com/auth/drive.file'],
+      scopes: ['https://www.googleapis.com/auth/drive'],
     });
 
     const drive = google.drive({ version: 'v3', auth });
@@ -21,11 +30,13 @@ export default async function handler(req, res) {
     const fileBuffer = Buffer.from(fileBase64, 'base64');
     const stream = Readable.from(fileBuffer);
 
+    const driveFolder = folderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+
     const response = await drive.files.create({
       requestBody: {
         name: fileName,
         mimeType,
-        parents: [folderId || process.env.GOOGLE_DRIVE_FOLDER_ID],
+        parents: driveFolder ? [driveFolder] : [],
       },
       media: {
         mimeType,
@@ -34,7 +45,6 @@ export default async function handler(req, res) {
       fields: 'id,name,webViewLink,webContentLink',
     });
 
-    // Tornar o arquivo público (leitura)
     await drive.permissions.create({
       fileId: response.data.id,
       requestBody: {
@@ -48,4 +58,4 @@ export default async function handler(req, res) {
     console.error('Drive upload error:', error);
     return res.status(500).json({ error: error.message });
   }
-}
+};
